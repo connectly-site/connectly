@@ -19,7 +19,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Initialize the Flask application
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'  # Replace with a real secret key
+app.config['SECRET_KEY'] = '370245c7ef36438d947a8e5b3415c389b4e27326d72407c7'  # Replace with a real secret key
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Maximum upload size: 16MB
