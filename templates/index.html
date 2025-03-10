@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Welcome, {{ current_user.username }}!</h2>
+
+<!-- Create a new post -->
+<a href="{{ url_for('create_post') }}" class="btn">Create a new post</a>
+
+<!-- Display posts -->
+<div class="posts">
+    <!-- Create post shortcut -->
+    <div class="create-post-shortcut">
+        <div class="user-avatar">
+            {% if current_user.profile_pic and current_user.profile_pic != 'default.jpg' %}
+                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" alt="Your Profile">
+            {% else %}
+                <i class="fas fa-user"></i>
+            {% endif %}
+        </div>
+        <a href="{{ url_for('create_post') }}" class="post-prompt">What's on your mind, {{ current_user.username }}?</a>
+    </div>
+
+    {% for post in posts %}
+        <div class="post">
+            <div class="post-header">
+                <div class="user-avatar">
+                    {% if post.author.profile_pic and post.author.profile_pic != 'default.jpg' %}
+                        <img src="{{ url_for('static', filename='uploads/' + post.author.profile_pic) }}" alt="Profile Picture">
+                    {% else %}
+                        <i class="fas fa-user"></i>
+                    {% endif %}
+                </div>
+                <div class="post-meta">
+                    <a href="{{ url_for('profile', user_id=post.author.id) }}" class="username">{{ post.author.username }}</a>
+                    <div class="timestamp">{{ post.timestamp.strftime('%B %d at %I:%M %p') }}</div>
+                </div>
+            </div>
+            <div class="post-content">
+                {{ post.content }}
+            </div>
+            {% if post.image %}
+                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="Post Image">
+            {% endif %}
+            
+            <!-- Like button and count -->
+            <div class="post-actions">
+                <button class="like-btn {% if current_user.id in post.likes|map(attribute='user_id')|list %}liked{% endif %}" 
+                        data-post-id="{{ post.id }}">
+                    <span class="like-count">{{ post.likes|length }}</span>
+                    <span class="like-text">{% if current_user.id in post.likes|map(attribute='user_id')|list %}Liked{% else %}Like{% endif %}</span>
+                </button>
+                <span class="interaction-stats">
+                    <span class="total-likes">{{ post.likes|length }} likes</span> •
+                    <span class="total-comments">{{ post.comments|length }} comments</span>
+                </span>
+            </div>
+
+            <!-- Comments section -->
+            <div class="comments">
+                {% for comment in post.comments %}
+                    <div class="comment">
+                        <strong><a href="{{ url_for('profile', user_id=comment.author.id) }}">{{ comment.author.username }}</a></strong>: 
+                        {{ comment.content }}
+                        <small>{{ comment.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                    </div>
+                {% endfor %}
+                
+                <!-- Comment form -->
+                <form class="comment-form" action="{{ url_for('add_comment', post_id=post.id) }}" method="POST">
+                    <input type="text" name="content" placeholder="Write a comment..." required>
+                    <button type="submit" class="btn btn-small">Comment</button>
+                </form>
+            </div>
+            
+            <p><small>{{ post.timestamp.strftime('%Y-%m-%d %H:%M') }}</small></p>
+        </div>
+    {% else %}
+        <p>No posts from friends yet. Try adding some friends to see their posts!</p>
+    {% endfor %}
+</div>
+{% endblock %} 

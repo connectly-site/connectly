@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-header">
+    <div class="profile-pic-container">
+        {% if user.profile_pic and user.profile_pic != 'default.jpg' %}
+            <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" alt="Profile Picture" class="profile-pic">
+        {% else %}
+            <div class="profile-pic profile-pic-placeholder">
+                <i class="fas fa-user"></i>
+            </div>
+        {% endif %}
+        {% if user.id == current_user.id %}
+            <form action="{{ url_for('update_profile_pic') }}" method="POST" enctype="multipart/form-data" class="profile-pic-form">
+                <label for="profile_pic" class="upload-btn">
+                    <i class="fas fa-camera"></i>
+                    Update Photo
+                </label>
+                <input type="file" id="profile_pic" name="profile_pic" accept="image/*" style="display: none;" onchange="this.form.submit()">
+            </form>
+        {% endif %}
+    </div>
+    <div class="profile-info">
+        <span class="full-name">{{ user.first_name }} {{ user.last_name }}</span>
+        <span class="username-text">@{{ user.username }}</span>
+        
+        <div class="profile-details">
+            <div class="detail-item">
+                <i class="fas fa-envelope"></i>
+                <span>{{ user.email }}</span>
+            </div>
+            <div class="detail-item">
+                <i class="fas fa-calendar"></i>
+                <span>{{ user.date_of_birth.strftime('%B %d, %Y') }}</span>
+            </div>
+            {% if user.bio %}
+                <p class="bio">{{ user.bio }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if user.id != current_user.id %}
+    {% set friendship = get_friendship_status(current_user.id, user.id) %}
+    {% if not friendship %}
+        <a href="{{ url_for('send_friend_request', user_id=user.id) }}" class="btn">Add Friend</a>
+    {% elif friendship.status == 'pending' %}
+        {% if friendship.user_id == current_user.id %}
+            <button class="btn" disabled>Friend Request Sent</button>
+        {% else %}
+            <div class="friend-actions">
+                <a href="{{ url_for('accept_friend_request', friendship_id=friendship.id) }}" class="btn">Accept</a>
+                <a href="{{ url_for('reject_friend_request', friendship_id=friendship.id) }}" class="btn btn-danger">Reject</a>
+            </div>
+        {% endif %}
+    {% elif friendship.status == 'accepted' %}
+        <div class="friend-actions">
+            <button class="btn" disabled>Friends</button>
+        </div>
+    {% endif %}
+{% endif %}
+
+<h3>Posts</h3>
+<div class="posts">
+    {% for post in posts %}
+        <div class="post">
+            <p><strong>{{ post.author.username }}</strong> says:</p>
+            <p>{{ post.content }}</p>
+            {% if post.image %}
+                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="Post Image">
+            {% endif %}
+            
+            <div class="post-actions">
+                <button class="like-btn {% if current_user.id in post.likes|map(attribute='user_id')|list %}liked{% endif %}" 
+                        data-post-id="{{ post.id }}">
+                    <span class="like-count">{{ post.likes|length }}</span>
+                    <span class="like-text">{% if current_user.id in post.likes|map(attribute='user_id')|list %}Liked{% else %}Like{% endif %}</span>
+                </button>
+                <span class="interaction-stats">
+                    <span class="total-likes">{{ post.likes|length }} likes</span> •
+                    <span class="total-comments">{{ post.comments|length }} comments</span>
+                </span>
+            </div>
+
+            <div class="comments">
+                {% for comment in post.comments %}
+                    <div class="comment">
+                        <strong><a href="{{ url_for('profile', user_id=comment.author.id) }}">{{ comment.author.username }}</a></strong>: 
+                        {{ comment.content }}
+                        <small>{{ comment.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                    </div>
+                {% endfor %}
+                
+                <form class="comment-form" action="{{ url_for('add_comment', post_id=post.id) }}" method="POST">
+                    <input type="text" name="content" placeholder="Write a comment..." required>
+                    <button type="submit" class="btn btn-small">Comment</button>
+                </form>
+            </div>
+            
+            <p><small>{{ post.timestamp.strftime('%Y-%m-%d %H:%M') }}</small></p>
+        </div>
+    {% else %}
+        <p>No posts yet.</p>
+    {% endfor %}
+</div>
+{% endblock %} 

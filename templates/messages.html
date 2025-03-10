@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="messages-container">
+    <!-- Friends Sidebar -->
+    <div class="messages-sidebar">
+        <h3>Conversations</h3>
+        <div class="friends-list">
+            {% for friend in friends %}
+                <a href="{{ url_for('conversation', user_id=friend.id) }}" 
+                   class="friend-item {% if current_chat and current_chat.id == friend.id %}active{% endif %}">
+                    {% if friend.profile_pic and friend.profile_pic != 'default.jpg' %}
+                        <img src="{{ url_for('static', filename='uploads/' + friend.profile_pic) }}" alt="Profile Picture">
+                    {% else %}
+                        <div class="profile-pic-placeholder small">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    {% endif %}
+                    <div class="friend-info">
+                        <span class="friend-name">{{ friend.username }}</span>
+                        {% set unread = friend.sent_messages|selectattr('receiver_id', 'equalto', current_user.id)|selectattr('read', 'equalto', false)|list|length %}
+                        {% if unread > 0 %}
+                            <span class="unread-badge">{{ unread }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+            {% else %}
+                <p class="no-friends">No friends yet. Add some friends to start messaging!</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-area">
+        {% if current_chat %}
+            <div class="chat-header">
+                <h3>{{ current_chat.username }}</h3>
+            </div>
+            <div class="messages-list">
+                {% for message in messages %}
+                    <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                        {{ message.content }}
+                        <small class="message-time">{{ message.timestamp.strftime('%H:%M') }}</small>
+                    </div>
+                {% endfor %}
+            </div>
+            <form class="message-form" action="{{ url_for('send_message', receiver_id=current_chat.id) }}" method="POST">
+                <input type="text" name="content" placeholder="Type a message..." required>
+                <button type="submit"><i class="fas fa-paper-plane"></i></button>
+            </form>
+        {% else %}
+            <div class="no-chat-selected">
+                <i class="fas fa-comments"></i>
+                <p>Select a friend to start messaging</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add similar JavaScript code for private chats -->
+{% if current_chat %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messagesContainer = document.querySelector('.messages-list');
+    const messageForm = document.querySelector('.message-form');
+    
+    // Scroll to bottom of messages
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // Add a new message to the chat
+    function addMessage(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${message.sender_id == {{ current_user.id }} ? 'sent' : 'received'}`;
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'message-header';
+        
+        const userInfoDiv = document.createElement('div');
+        userInfoDiv.className = 'user-info';
+        
+        // Add profile picture
+        if (message.sender_profile_pic && message.sender_profile_pic != 'default.jpg') {
+            const img = document.createElement('img');
+            img.src = `/static/uploads/${message.sender_profile_pic}`;
+            img.alt = `${message.sender_username}'s profile picture`;
+            img.className = 'profile-pic small';
+            userInfoDiv.appendChild(img);
+        } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'profile-pic-placeholder small';
+            placeholder.innerHTML = '<i class="fas fa-user"></i>';
+            userInfoDiv.appendChild(placeholder);
+        }
+        
+        const username = document.createElement('strong');
+        username.textContent = message.sender_username;
+        userInfoDiv.appendChild(username);
+        
+        const timestamp = document.createElement('small');
+        timestamp.textContent = message.timestamp;
+        
+        headerDiv.appendChild(userInfoDiv);
+        headerDiv.appendChild(timestamp);
+        
+        const content = document.createElement('p');
+        content.textContent = message.content;
+        
+        messageDiv.appendChild(headerDiv);
+        messageDiv.appendChild(content);
+        
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+    }
+    
+    // Handle form submission
+    messageForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const input = this.querySelector('input[name="content"]');
+        const content = input.value.trim();
+        
+        if (!content) return;
+        
+        try {
+            const response = await fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `content=${encodeURIComponent(content)}`
+            });
+            
+            if (response.ok) {
+                input.value = '';
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
+    });
+    
+    // Set up SSE connection for private chat
+    const chatId = {{ chat_user.id }};
+    const eventSource = new EventSource(`/stream/private/${chatId}`);
+    
+    eventSource.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.content) {
+            addMessage(data);
+        }
+    };
+    
+    // Initial scroll to bottom
+    scrollToBottom();
+});
+</script>
+{% endif %}
+{% endblock %} 

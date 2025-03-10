@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="group-chat-container">
+    <div class="group-sidebar">
+        <div class="group-info">
+            <h3>{{ group.name }}</h3>
+            <p>{{ members|length }} members</p>
+            <div class="group-actions">
+                {% if is_admin %}
+                    <a href="{{ url_for('delete_group', group_id=group.id) }}" 
+                       class="btn btn-danger btn-sm"
+                       onclick="return confirm('Are you sure you want to delete this group?')">
+                        Delete Group
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('leave_group', group_id=group.id) }}" 
+                       class="btn btn-warning btn-sm"
+                       onclick="return confirm('Are you sure you want to leave this group?')">
+                        Leave Group
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="members-list">
+            <h4>Members</h4>
+            {% for member in members %}
+                <div class="member-item">
+                    <div class="member-info">
+                        {% if member.profile_pic and member.profile_pic != 'default.jpg' %}
+                            <img src="{{ url_for('static', filename='uploads/' + member.profile_pic) }}" 
+                                 alt="{{ member.username }}'s profile picture"
+                                 class="profile-pic small">
+                        {% else %}
+                            <div class="profile-pic-placeholder small">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        {% endif %}
+                        <span>{{ member.username }}</span>
+                        {% if member.id == group.admin_id %}
+                            <span class="admin-badge">Admin</span>
+                        {% endif %}
+                    </div>
+                    {% if is_admin and member.id != current_user.id %}
+                        <a href="{{ url_for('remove_group_member', group_id=group.id, user_id=member.id) }}"
+                           class="remove-member"
+                           onclick="return confirm('Remove this member?')">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            
+            {% if is_admin %}
+                <div class="add-member-form">
+                    <form action="{{ url_for('add_group_member', group_id=group.id) }}" method="POST">
+                        <select name="user_id" required>
+                            <option value="">Select friend to add</option>
+                            {% for friend in users %}
+                                <option value="{{ friend.id }}">{{ friend.username }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm">Add</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="chat-area">
+        <div class="messages-list">
+            {% for message in messages %}
+                <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                    <div class="message-header">
+                        <div class="user-info">
+                            {% if message.sender.profile_pic and message.sender.profile_pic != 'default.jpg' %}
+                                <img src="{{ url_for('static', filename='uploads/' + message.sender.profile_pic) }}" 
+                                     alt="{{ message.sender.username }}'s profile picture"
+                                     class="profile-pic small">
+                            {% else %}
+                                <div class="profile-pic-placeholder small">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            {% endif %}
+                            <strong>{{ message.sender.username }}</strong>
+                        </div>
+                        <small>{{ message.timestamp.strftime('%H:%M') }}</small>
+                    </div>
+                    <p>{{ message.content }}</p>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <form class="message-form" action="{{ url_for('send_group_message', group_id=group.id) }}" method="POST">
+            <div class="message-input-container">
+                {% if current_user.profile_pic and current_user.profile_pic != 'default.jpg' %}
+                    <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" 
+                         alt="Your profile picture"
+                         class="profile-pic small">
+                {% else %}
+                    <div class="profile-pic-placeholder small">
+                        <i class="fas fa-user"></i>
+                    </div>
+                {% endif %}
+                <input type="text" name="content" placeholder="Type a message..." required>
+            </div>
+            <button type="submit">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messagesContainer = document.querySelector('.messages-list');
+    const messageForm = document.querySelector('.message-form');
+    const input = messageForm.querySelector('input[name="content"]');
+    let eventSource;
+    let processedMessages = new Set(); // For deduplication
+    
+    console.log('Group chat script loaded');
+    
+    // Scroll to bottom of messages
+    function scrollToBottom() {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // Add a new message to the chat if not already displayed
+    function addMessage(message) {
+        // Skip if message has already been processed
+        if (message._msg_id && processedMessages.has(message._msg_id)) {
+            console.log('Skipping duplicate message:', message._msg_id);
+            return;
+        }
+        
+        console.log('Adding message:', message);
+        
+        // Skip system messages
+        if (message.type === 'ping' || message.type === 'connection') {
+            console.log('Received system message:', message);
+            return;
+        }
+        
+        // Skip if message has no content
+        if (!message.content) {
+            console.log('Empty message received, skipping');
+            return;
+        }
+        
+        // Add to processed set for deduplication
+        if (message._msg_id) {
+            processedMessages.add(message._msg_id);
+            
+            // Limit set size to prevent memory leaks
+            if (processedMessages.size > 200) {
+                const iterator = processedMessages.values();
+                processedMessages.delete(iterator.next().value);
+            }
+        }
+        
+        // Create message element
+        const isSentByMe = parseInt(message.sender_id) === {{ current_user.id }};
+        console.log(`Message from: ${message.sender_id}, Current user: {{ current_user.id }}, isSentByMe: ${isSentByMe}`);
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isSentByMe ? 'sent' : 'received'}`;
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'message-header';
+        
+        const userInfoDiv = document.createElement('div');
+        userInfoDiv.className = 'user-info';
+        
+        // Add profile picture
+        if (message.sender_profile_pic && message.sender_profile_pic !== 'default.jpg') {
+            const img = document.createElement('img');
+            img.src = `/static/uploads/${message.sender_profile_pic}`;
+            img.alt = `${message.sender_username}'s profile picture`;
+            img.className = 'profile-pic small';
+            userInfoDiv.appendChild(img);
+        } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'profile-pic-placeholder small';
+            placeholder.innerHTML = '<i class="fas fa-user"></i>';
+            userInfoDiv.appendChild(placeholder);
+        }
+        
+        const username = document.createElement('strong');
+        username.textContent = message.sender_username;
+        userInfoDiv.appendChild(username);
+        
+        const timestamp = document.createElement('small');
+        timestamp.textContent = message.timestamp;
+        
+        headerDiv.appendChild(userInfoDiv);
+        headerDiv.appendChild(timestamp);
+        
+        const content = document.createElement('p');
+        content.textContent = message.content;
+        
+        messageDiv.appendChild(headerDiv);
+        messageDiv.appendChild(content);
+        
+        messagesContainer.appendChild(messageDiv);
+        scrollToBottom();
+    }
+    
+    // Handle form submission
+    messageForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const content = input.value.trim();
+        
+        if (!content) return;
+        
+        console.log('Sending message:', content);
+        
+        try {
+            const response = await fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `content=${encodeURIComponent(content)}`
+            });
+            
+            if (response.ok) {
+                console.log('Message sent successfully');
+                input.value = '';
+                
+                // The message will come through the event stream
+                // But we can also process the response
+                const responseData = await response.json();
+                console.log('Server response:', responseData);
+                
+                // If we need to immediately show the message as a fallback
+                // addMessage(responseData.message);
+            } else {
+                console.error('Error sending message:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
+    });
+    
+    // Set up SSE connection with reconnection logic
+    function setupEventSource() {
+        console.log('Setting up SSE connection...');
+        
+        const groupId = {{ group.id }};
+        // Add a timestamp to prevent caching
+        eventSource = new EventSource(`/stream/group/${groupId}?t=${Date.now()}`);
+        
+        eventSource.onopen = function() {
+            console.log('SSE connection opened');
+        };
+        
+        eventSource.onmessage = function(e) {
+            console.log('SSE message received:', e.data);
+            try {
+                const data = JSON.parse(e.data);
+                addMessage(data);
+            } catch (error) {
+                console.error('Error parsing SSE message:', error);
+            }
+        };
+        
+        eventSource.onerror = function(e) {
+            console.error('SSE connection error:', e);
+            eventSource.close();
+            
+            // Try to reconnect after a delay
+            setTimeout(setupEventSource, 3000);
+        };
+    }
+    
+    // Start SSE connection
+    setupEventSource();
+    
+    // Initial scroll to bottom
+    scrollToBottom();
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', function() {
+        if (eventSource) {
+            console.log('Closing SSE connection');
+            eventSource.close();
+        }
+    });
+});
+</script>
+{% endblock %} 

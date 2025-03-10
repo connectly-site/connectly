@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="search-container">
+    <h2>Search Results for "{{ query }}"</h2>
+    
+    {% if users %}
+        <div class="search-results">
+            {% for user in users %}
+                <div class="search-result-card">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            {% if user.profile_pic and user.profile_pic != 'default.jpg' %}
+                                <img src="{{ url_for('static', filename='uploads/' + user.profile_pic) }}" alt="{{ user.username }}'s profile">
+                            {% else %}
+                                <i class="fas fa-user"></i>
+                            {% endif %}
+                        </div>
+                        <div class="user-details">
+                            <a href="{{ url_for('profile', user_id=user.id) }}" class="username">{{ user.username }}</a>
+                        </div>
+                    </div>
+                    
+                    {% if user.id != current_user.id %}
+                        <div class="action-buttons">
+                            {% set friendship = get_friendship_status(current_user.id, user.id) %}
+                            {% if not friendship %}
+                                <a href="{{ url_for('send_friend_request', user_id=user.id) }}" class="btn btn-small">Add Friend</a>
+                            {% elif friendship.status == 'pending' and friendship.user_id == current_user.id %}
+                                <button class="btn btn-small" disabled>Request Sent</button>
+                            {% elif friendship.status == 'accepted' %}
+                                <button class="btn btn-small btn-friends" disabled>
+                                    <i class="fas fa-check"></i> Friends
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-results">
+            <i class="fas fa-search"></i>
+            <p>No users found matching "{{ query }}"</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="create-post-page">
+    <div class="create-post-container">
+        <div class="create-post-header">
+            <h2>Create a Post</h2>
+            <p>Share what's on your mind</p>
+        </div>
+        
+        <form method="POST" enctype="multipart/form-data" class="create-post-form">
+            {{ form.hidden_tag() }}
+            
+            <div class="post-content">
+                <div class="user-info">
+                    {% if current_user.profile_pic and current_user.profile_pic != 'default.jpg' %}
+                        <img src="{{ url_for('static', filename='uploads/' + current_user.profile_pic) }}" alt="Profile Picture" class="profile-pic-small">
+                    {% else %}
+                        <div class="profile-pic-placeholder small">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    {% endif %}
+                    <span class="username">{{ current_user.username }}</span>
+                </div>
+
+                {{ form.content(placeholder="What's on your mind?", class="content-textarea") }}
+                {% if form.content.errors %}
+                    <div class="errors">
+                        {% for error in form.content.errors %}
+                            <span class="error-text">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="media-preview" id="mediaPreview" style="display: none;">
+                <img id="imagePreview" src="" alt="Preview">
+                <button type="button" class="remove-media" onclick="removeMedia()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="post-actions">
+                <div class="media-upload">
+                    <label for="{{ form.image.id }}" class="media-upload-btn">
+                        <i class="fas fa-image"></i>
+                        Add Photo
+                    </label>
+                    {{ form.image(class="hidden", onchange="previewImage(this)") }}
+                </div>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function previewImage(input) {
+    const preview = document.getElementById('mediaPreview');
+    const imagePreview = document.getElementById('imagePreview');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            imagePreview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removeMedia() {
+    const input = document.querySelector('input[type="file"]');
+    const preview = document.getElementById('mediaPreview');
+    input.value = '';
+    preview.style.display = 'none';
+}
+</script>
+{% endblock %} 

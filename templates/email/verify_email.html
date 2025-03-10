@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #C76B78;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .note {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Welcome to Connectly!</h2>
+        <p>Hi {{ user.first_name }},</p>
+        <p>Thank you for registering with Connectly. To complete your registration, please verify your email address by clicking the button below:</p>
+        
+        <a href="{{ verification_url }}" class="button">Verify Email Address</a>
+        
+        <p>If the button doesn't work, you can also copy and paste this link into your browser:</p>
+        <p>{{ verification_url }}</p>
+        
+        <p>This link will expire in 24 hours.</p>
+        
+        <div class="note">
+            <p><strong>Note:</strong> If you don't see our emails in your inbox, please check your spam folder. To ensure you receive our emails in the future, please add {{ sender }} to your contacts.</p>
+        </div>
+        
+        <p>Best regards,<br>The Connectly Team</p>
+    </div>
+</body>
+</html> 

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Connectly</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/scripts.js') }}" defer></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    {% if current_user.is_authenticated %}
+    <nav>
+        <div class="nav-left">
+            <a href="{{ url_for('index') }}" class="logo">
+                <img src="{{ url_for('static', filename='css/logo.svg') }}" alt="Connectly" class="logo-img">
+            </a>
+            <div class="nav-main-links">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="{{ url_for('friends') }}" class="nav-link {% if request.endpoint == 'friends' %}active{% endif %}">
+                    <i class="fas fa-user-friends"></i>
+                    <span>Friends</span>
+                </a>
+                <a href="{{ url_for('messages') }}" class="nav-link {% if request.endpoint == 'messages' %}active{% endif %}">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Messages</span>
+                </a>
+                <a href="{{ url_for('groups') }}" class="nav-link {% if request.endpoint == 'groups' %}active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    Groups
+                </a>
+            </div>
+            <div class="nav-search">
+                <form action="{{ url_for('search') }}" method="GET">
+                    <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q', '') }}">
+                    <i class="fas fa-search"></i>
+                </form>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-icons">
+                <a href="{{ url_for('profile', user_id=current_user.id) }}" class="nav-icon" title="Profile">
+                    <i class="fas fa-user-circle"></i>
+                </a>
+                <a href="{{ url_for('notifications') }}" class="nav-icon" title="Notifications">
+                    <i class="fas fa-bell"></i>
+                    {% set unread = current_user.notifications|selectattr('read', 'equalto', false)|list|length %}
+                    {% if unread > 0 %}
+                        <span class="notification-badge">{{ unread }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('friend_requests') }}" class="nav-icon" title="Friend Requests">
+                    <i class="fas fa-user-plus"></i>
+                    {% set pending = current_user.friends|selectattr('status', 'equalto', 'pending')|list|length %}
+                    {% if pending > 0 %}
+                        <span class="notification-badge">{{ pending }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('logout') }}" class="nav-icon" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Content Block -->
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html> 

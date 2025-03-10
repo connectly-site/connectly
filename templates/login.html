@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <div class="auth-header">
+            <img src="{{ url_for('static', filename='css/logo.svg') }}" alt="Connectly" class="auth-logo">
+            <h2>Connectly</h2>
+            <p>Connect with friends and the world around you.</p>
+        </div>
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    {{ form.email(size=32, placeholder="Email address") }}
+                </div>
+                {% if form.email.errors %}
+                    <div class="errors">
+                        {% for error in form.email.errors %}
+                            <span class="error-text">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    {{ form.password(size=32, placeholder="Password") }}
+                </div>
+                {% if form.password.errors %}
+                    <div class="errors">
+                        {% for error in form.password.errors %}
+                            <span class="error-text">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            {{ form.submit(class="btn btn-primary btn-block") }}
+        </form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if category == 'warning' and 'verify your email' in message %}
+                        <div class="verification-notice">
+                            <p>Didn't receive the verification email? 
+                                <a href="{{ url_for('resend_verification') }}">Click here to resend</a>
+                            </p>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div class="auth-footer">
+            <div class="divider">
+                <span>or</span>
+            </div>
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-block">Create New Account</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

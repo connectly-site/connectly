@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="groups-container">
+    <div class="groups-header">
+        <h2>Your Groups</h2>
+        <a href="{{ url_for('create_group') }}" class="btn btn-primary">Create New Group</a>
+    </div>
+    
+    <div class="groups-list">
+        {% for group in groups %}
+            <div class="group-card">
+                <div class="group-info">
+                    <h3>{{ group.name }}</h3>
+                    <p>{{ group.members|length }} members</p>
+                    {% if group.admin_id == current_user.id %}
+                        <span class="admin-badge">Admin</span>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('group_chat', group_id=group.id) }}" class="btn btn-primary">Open Chat</a>
+            </div>
+        {% else %}
+            <p class="no-groups">You're not a member of any groups yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 
